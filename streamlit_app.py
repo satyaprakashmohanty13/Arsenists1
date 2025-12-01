@@ -40,7 +40,7 @@ if uploaded_file is not None:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.image(image, caption='Uploaded Image', use_container_width=True)
+        st.image(image, caption='Uploaded Image', width="stretch")
 
     with st.spinner('Processing image...'):
         try:
@@ -51,7 +51,7 @@ if uploaded_file is not None:
             display_grid_img_rgb = cv2.cvtColor(display_grid_img, cv2.COLOR_BGR2RGB)
 
             with col2:
-                st.image(display_grid_img_rgb, caption='Processed Image', use_container_width=True)
+                st.image(display_grid_img_rgb, caption='Processed Image', width="stretch")
 
             st.subheader("Recognized Grid")
             st.write("Please verify the numbers below and edit if necessary.")

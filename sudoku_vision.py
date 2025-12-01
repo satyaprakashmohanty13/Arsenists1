@@ -735,16 +735,25 @@ class SudokuVision:
                 best_digit = digit
         
         # Return best matched digit
-        # If CNN is very confident (>0.9), trust it even if feature score is low
-        # Otherwise use the weighted score
+        # Prioritize CNN confidence
         if best_digit is not None:
              # Find confidence of best_digit
              idx = list(top3_indices).index(best_digit)
              best_conf = confidences[idx]
 
-             if best_conf > 0.9:
+             # If CNN is confident enough, trust it directly
+             # Lowered threshold to 0.7 to handle real-world noise better
+             if best_conf > 0.7:
                  return best_digit
-             elif best_score > 0.5: # Lowered threshold from 0.65
+
+             # If score is decent, trust it
+             if best_score > 0.5:
+                 return best_digit
+
+             # Fallback: if we have a moderate confidence (>0.5) guess, use it
+             # rather than returning 0 (empty), which is likely wrong for a non-empty cell.
+             # Note: This might introduce false positives, but user can edit.
+             if best_conf > 0.5:
                  return best_digit
         
         return 0
