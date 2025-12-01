@@ -735,8 +735,17 @@ class SudokuVision:
                 best_digit = digit
         
         # Return best matched digit
-        if best_score > 0.65:
-            return best_digit
+        # If CNN is very confident (>0.9), trust it even if feature score is low
+        # Otherwise use the weighted score
+        if best_digit is not None:
+             # Find confidence of best_digit
+             idx = list(top3_indices).index(best_digit)
+             best_conf = confidences[idx]
+
+             if best_conf > 0.9:
+                 return best_digit
+             elif best_score > 0.5: # Lowered threshold from 0.65
+                 return best_digit
         
         return 0
 
