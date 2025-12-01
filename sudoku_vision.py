@@ -58,9 +58,16 @@ class SudokuVision:
         model.save('mnist_model.h5')
         self.model = model
 
-    def preprocess_image(self, image_path):
-        """Preprocess image"""
-        img = cv2.imread(image_path)
+    def preprocess_image(self, image_input):
+        """Preprocess image
+        Args:
+            image_input: image path or numpy array
+        """
+        if isinstance(image_input, str):
+            img = cv2.imread(image_input)
+        else:
+            img = image_input
+
         if img is None:
             raise ValueError("Could not read image")
         
@@ -733,42 +740,55 @@ class SudokuVision:
         
         return 0
 
+    def recognize_grid_from_image(self, image_input):
+        """Recognize Sudoku grid from image without user interaction
+        Returns:
+            list: 9x9 grid of integers
+            numpy.ndarray: Debug image with recognized digits overlaid
+        """
+        thresh, img = self.preprocess_image(image_input)
+        square = self.find_largest_square(thresh)
+        cells = self.extract_digits(img, square)
+
+        # Create display grid
+        cell_size = 60
+        gap = 2
+        grid_size = 9 * cell_size + 8 * gap
+        display_grid = np.full((grid_size, grid_size, 3), 255, dtype=np.uint8)
+
+        # Recognize digits and build Sudoku string
+        recognized_grid = []
+        for i in range(9):
+            row = []
+            for j in range(9):
+                cell = cells[i][j]
+                digit = self.recognize_digit(cell, row=i, col=j)
+                row.append(digit)
+
+                # Display cell
+                y1 = i * (cell_size + gap)
+                x1 = j * (cell_size + gap)
+                cell_display = cv2.resize(cell, (cell_size, cell_size))
+                cell_display = cv2.cvtColor(cell_display, cv2.COLOR_GRAY2BGR)
+                display_grid[y1:y1+cell_size, x1:x1+cell_size] = cell_display
+
+                if digit != 0:
+                    cv2.putText(display_grid, str(digit),
+                              (x1+15, y1+45),
+                              cv2.FONT_HERSHEY_SIMPLEX,
+                              1, (0, 255, 0), 2)
+            recognized_grid.append(row)
+
+        return recognized_grid, display_grid
+
     def process_image(self, image_path):
         """Process image and return Sudoku string"""
         try:
-            thresh, img = self.preprocess_image(image_path)
-            square = self.find_largest_square(thresh)
-            cells = self.extract_digits(img, square)
-            
-            # Create display grid
+            recognized_grid, display_grid = self.recognize_grid_from_image(image_path)
+            grid_size = display_grid.shape[0]
             cell_size = 60
             gap = 2
-            grid_size = 9 * cell_size + 8 * gap
-            display_grid = np.full((grid_size, grid_size, 3), 255, dtype=np.uint8)
-            
-            # Recognize digits and build Sudoku string
-            recognized_grid = []
-            for i in range(9):
-                row = []
-                for j in range(9):
-                    cell = cells[i][j]
-                    digit = self.recognize_digit(cell, row=i, col=j)
-                    row.append(digit)
-                    
-                    # Display cell
-                    y1 = i * (cell_size + gap)
-                    x1 = j * (cell_size + gap)
-                    cell_display = cv2.resize(cell, (cell_size, cell_size))
-                    cell_display = cv2.cvtColor(cell_display, cv2.COLOR_GRAY2BGR)
-                    display_grid[y1:y1+cell_size, x1:x1+cell_size] = cell_display
-                    
-                    if digit != 0:
-                        cv2.putText(display_grid, str(digit), 
-                                  (x1+15, y1+45), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 
-                                  1, (0, 255, 0), 2)
-                recognized_grid.append(row)
-            
+
             # Display recognition result
             print("\nRecognized Sudoku:")
             self.print_grid(recognized_grid)
